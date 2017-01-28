@@ -172,7 +172,7 @@ void loop()
         my_mqtt.initialize(String(configuration.id), configuration.sensor_ip, configuration.broker_ip, NULL);
 
         what_time_is_now = millis() + (sleep_counter * sleep_for_s * 1000);
-        if (what_time_is_now - last_loop_timer > publish_every_s * 1000) {
+        if ((what_time_is_now - last_loop_timer > publish_every_s * 1000) || startup_flag) {
             last_loop_timer = what_time_is_now;
 #if defined(DEBUG)
             Serial.print("free memory = ");
