@@ -50,6 +50,27 @@ bool mqtt_publisher::publish(const String& topic, const uint8_t* payload, unsign
     return return_state;
 }
 
+bool mqtt_publisher::publish(const String& topic, const char* value)
+{
+    bool return_state = false;
+    unsigned int counter = 0;
+    do {
+        counter++;
+        if (mqtt_client_.connected()) {
+            DEBUG_PRINT(Serial.print(counter));
+            INFO_PRINT(Serial.print(F(" PS ")));
+            INFO_PRINT(Serial.println(topic));
+            return_state = mqtt_client_.publish(topic.c_str(), value);
+            delay(80); // some time for processing
+        } else {
+            INFO_PRINT(Serial.println(F("PS F")));
+            break;
+        }
+    } while (!return_state);
+
+    return return_state;
+}
+
 bool mqtt_publisher::start_and_supervise(bool is_sub)
 {
     //TODO: check if initialized

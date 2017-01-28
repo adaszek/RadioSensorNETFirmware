@@ -154,6 +154,7 @@ public:
     mqtt_publisher& operator=(const mqtt_publisher&) = delete;
     ~mqtt_publisher();
     bool publish(const String& topic, const uint8_t* payload, unsigned int plength);
+    bool publish(const String& topic, const char* value);
     bool start_and_supervise(bool is_sub = false);
     void stop();
     bool loop();

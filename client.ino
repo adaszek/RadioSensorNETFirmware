@@ -64,6 +64,8 @@ unsigned long int sleep_counter = 0;
 const int sleep_for_s = 1;
 const int publish_every_s = 5;
 
+bool startup_flag = true;
+
 template <>
 void execute_impl(char* str_buffer, String& value_to_set) {
     value_to_set = String(str_buffer);
@@ -195,6 +197,11 @@ void loop()
             publish_prefix.concat("/s/");
             publish_prefix.concat(String(configuration.id));
             publish_prefix.concat("/");
+            if (startup_flag)
+            {
+                my_mqtt.publish(publish_prefix + "a", "started");
+                startup_flag = false;
+            }
             my_mqtt.publish(publish_prefix + "t", (byte*)&(temp_reading.temperature), sizeof(((dht22_reading*)0)->temperature));
             my_mqtt.publish(publish_prefix + "h", (byte*)&(temp_reading.humidity), sizeof(((dht22_reading*)0)->humidity));
             my_mqtt.publish(publish_prefix + "v", (byte*)&(voltage_reading), sizeof(voltage_reading));
