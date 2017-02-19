@@ -115,6 +115,8 @@ void loop()
         IPAddress sip(configuration.sensor_ip[0], configuration.sensor_ip[1], configuration.sensor_ip[2], configuration.sensor_ip[3]);
         IPAddress gip(configuration.gateway_ip[0], configuration.gateway_ip[1], configuration.gateway_ip[2], configuration.gateway_ip[3]);
         IPAddress bip(configuration.broker_ip[0], configuration.broker_ip[1], configuration.broker_ip[2], configuration.broker_ip[3]);
+
+        uint8_t initial_id = configuration.id;
         
         set_action<uint8_t, 4> set_id("id", configuration.id);
         set_action<String, 4> set_location("loc", location);
@@ -147,6 +149,10 @@ void loop()
         while (digitalRead(10) == LOW) {
             serial_receiver.get_serial_data();
             serial_receiver.handle_new_data();
+        }
+
+        if (initial_id != configuration.id) {
+            startup_flag = true;
         }
 
         strncpy(configuration.location, location.c_str(), sizeof(configuration.location));
