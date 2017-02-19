@@ -205,7 +205,7 @@ void loop()
             publish_prefix.concat("/");
             if (startup_flag)
             {
-                my_mqtt.publish(publish_prefix + "a", "started");
+                my_mqtt.publish(publish_prefix + "a", "r:t,h,v;w:0");
                 startup_flag = false;
             }
             my_mqtt.publish(publish_prefix + "t", (byte*)&(temp_reading.temperature), sizeof(((dht22_reading*)0)->temperature));
