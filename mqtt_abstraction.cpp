@@ -83,6 +83,7 @@ bool mqtt_publisher::start_and_supervise(bool is_sub)
             }
             return_state = true;
         } else {
+            //TODO: trigger reset if cannot connect for a long time
             INFO_PRINT(Serial.print(F("MQ F ")));
             INFO_PRINT(Serial.println(mqtt_client_.state()));
         }

@@ -203,9 +203,12 @@ void loop()
             publish_prefix.concat("/s/");
             publish_prefix.concat(String(configuration.id));
             publish_prefix.concat("/");
+            
             if (startup_flag)
             {
-                my_mqtt.publish(publish_prefix + "a", "r:t,h,v;w:0");
+                String capabilities = "r:t,h,v;w:0;s:";
+                capabilities += sleep_for_s;
+                my_mqtt.publish(publish_prefix + "a", capabilities.c_str());
                 startup_flag = false;
             }
             my_mqtt.publish(publish_prefix + "t", (byte*)&(temp_reading.temperature), sizeof(((dht22_reading*)0)->temperature));
