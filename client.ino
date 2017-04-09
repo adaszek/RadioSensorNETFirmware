@@ -25,6 +25,8 @@ struct config {
 
 const char* rl_topic_prefix = { "r/l/" };
 
+const uint8_t config_pin = 9;
+
 RF24 radio{ 7, 8 };
 RF24Network network(radio);
 RF24Mesh mesh(radio, network);
@@ -94,8 +96,8 @@ void setup()
         DEBUG_PRINT(Serial.println(F("C D")));
     }
 
-    pinMode(10, INPUT);
-    digitalWrite(10, HIGH);
+    pinMode(config_pin, INPUT);
+    digitalWrite(config_pin, HIGH);
     network.setup_watchdog(7);
 
     rf24_network::start(configuration.sensor_ip, configuration.gateway_ip, mesh);
@@ -108,7 +110,7 @@ void loop()
 {
     RF24Ethernet.update();
     rf24_network::check_state(mesh);
-    if (digitalRead(10) == LOW) {
+    if (digitalRead(config_pin) == LOW) {
         INFO_PRINT(Serial.println(F("CM")));
 
         String location(configuration.location);
@@ -146,7 +148,7 @@ void loop()
         handler.get_actions[3] = &get_gip;
         handler.get_actions[4] = &get_bip;
 
-        while (digitalRead(10) == LOW) {
+        while (digitalRead(config_pin) == LOW) {
             serial_receiver.get_serial_data();
             serial_receiver.handle_new_data();
         }
