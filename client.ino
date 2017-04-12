@@ -1,4 +1,4 @@
-#include "../definitions.h"
+#include "definitions.h"
 #include "battery.h"
 #include "mqtt_abstraction.h"
 #include "serial_reader.h"

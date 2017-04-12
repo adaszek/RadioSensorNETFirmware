@@ -1,7 +1,7 @@
 #pragma once
 #include <dht.h>
 
-#include "../definitions.h"
+#include "definitions.h"
 
 class temperature_sensor
 {
