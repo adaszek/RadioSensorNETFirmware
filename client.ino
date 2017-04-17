@@ -187,6 +187,7 @@ void loop()
             Serial.println(getFreeMemory());
 #endif
             //TODO: if cannot connect should be possible to go into config mode
+            //TODO: possibly stucks here
             while (!my_mqtt.start_and_supervise()) {
                 delay(200);
             }
