@@ -148,7 +148,7 @@ private:
 
 class mqtt_publisher {
 public:
-    mqtt_publisher();
+    mqtt_publisher(RF24Mesh& mesh);
     void initialize(const String& client_name, const IPAddress& my_ip, const IPAddress& broker_ip, abstract_trampoline* trampoline = NULL, unsigned int broker_port = 1883);
     mqtt_publisher(const mqtt_publisher&) = delete;
     mqtt_publisher& operator=(const mqtt_publisher&) = delete;
@@ -167,6 +167,7 @@ private:
     EthernetClient eth_client_;
     abstract_trampoline* trampoline_;
     PubSubClient mqtt_client_;
+    RF24Mesh& mesh_;
 
     void resubscribe();
 };

@@ -13,7 +13,8 @@ void abstract_topic_handler::callback(char* topic, byte* payload, unsigned int l
     }
 }
 
-mqtt_publisher::mqtt_publisher()
+mqtt_publisher::mqtt_publisher(RF24Mesh& mesh)
+    : mesh_(mesh)
 {
 }
 
@@ -75,6 +76,9 @@ bool mqtt_publisher::start_and_supervise(bool is_sub)
 {
     //TODO: check if initialized
     bool return_state = false;
+    if (!mesh_.checkConnection()) {
+        mesh_.renewAddress();
+    }
     if (!mqtt_client_.connected()) {
         if (mqtt_client_.connect(client_name_.c_str())) {
             INFO_PRINT(Serial.println(F("MQ O")));
@@ -96,6 +100,7 @@ void mqtt_publisher::stop()
     if (mqtt_client_.connected()) {
         mqtt_client_.disconnect();
     }
+    mesh_.releaseAddress();
 }
 
 bool mqtt_publisher::loop()
