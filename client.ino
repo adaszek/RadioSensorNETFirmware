@@ -52,7 +52,7 @@ unsigned long int what_time_is_now = 0;
 unsigned long int last_loop_timer = 0;
 unsigned long int sleep_counter = 0;
 const int sleep_for_s = 1;
-const int publish_every_s = 5;
+const int publish_every_s = 1;
 
 bool startup_flag = true;
 
@@ -169,6 +169,7 @@ void processing_mode()
     what_time_is_now = millis() + (sleep_counter * sleep_for_s * 1000);
     DEBUG_PRINT(Serial.println(what_time_is_now));
     if ((what_time_is_now - last_loop_timer > publish_every_s * 1000) || startup_flag) {
+        radio.powerUp();
         my_mqtt.initialize(String(configuration.id), configuration.sensor_ip, configuration.broker_ip, NULL);
         last_loop_timer = what_time_is_now;
 #if defined(DEBUG)
@@ -208,6 +209,7 @@ void processing_mode()
         my_mqtt.publish(publish_prefix + "h", (byte*)&(temp_reading.humidity), sizeof(((dht22_reading*)0)->humidity));
         my_mqtt.publish(publish_prefix + "v", (byte*)&(voltage_reading), sizeof(voltage_reading));
         my_mqtt.stop();
+        radio.powerDown();
     } else {
         DEBUG_PRINT(Serial.println("timer else"));
     }
@@ -216,10 +218,8 @@ void processing_mode()
 void sleeping_mode()
 {
     DEBUG_PRINT(Serial.println("sleeping"));
-    radio.powerDown();
     Serial.flush();
     network.sleepNode(sleep_for_s, 255);
-    radio.powerUp();
     sleep_counter++;
 }
 
