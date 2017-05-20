@@ -165,7 +165,7 @@ void configuration_mode()
 
 void processing_mode()
 {
-    RF24Ethernet.update();
+//    RF24Ethernet.update();
     what_time_is_now = millis() + (sleep_counter * sleep_for_s * 1000);
     DEBUG_PRINT(Serial.println(what_time_is_now));
     if ((what_time_is_now - last_loop_timer > publish_every_s * 1000) || startup_flag) {
@@ -178,7 +178,7 @@ void processing_mode()
 #endif
         //TODO: if cannot connect should be possible to go into config mode
         while (!my_mqtt.start_and_supervise()) {
-            RF24Ethernet.update();
+//            RF24Ethernet.update();
             delay(200);
             DEBUG_PRINT(Serial.println("waiting"));
         }

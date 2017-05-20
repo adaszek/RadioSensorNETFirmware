@@ -7,7 +7,7 @@ MONITOR_BAUDRATE  = 57600
 ARDUINO_LIBS = RF24 RF24Ethernet RF24Mesh RF24Network DHTlib PubSubClient SPI EEPROM
 
 CXXFLAGS_STD = -std=gnu++14
-CXXFLAGS += -pedantic -Wall -Wextra -fno-exceptions -Os -DDEBUG_PRINT_ENABLED -DINFO_PRINT_ENABLED
+CXXFLAGS += -pedantic -Wall -Wextra -fno-exceptions -Os -DDEBUG_PRINT_ENABLED -DINFO_PRINT_ENABLED -felide-constructors
 
 LDFLAGS += -flto
 

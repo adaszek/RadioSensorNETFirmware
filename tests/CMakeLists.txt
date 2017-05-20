@@ -18,8 +18,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall")
  
 include_directories(mocks/include)
 include_directories(mocks/include/arduino-mock)
+include_directories(fakes)
  
-add_executable(runTests tools_tests.cpp serial_reader_tests.cpp ../tools.cpp mocks/src/ArduinoMockAll.cc)
+add_executable(runTests tools_tests.cpp serial_reader_tests.cpp ../tools.cpp mocks/src/ArduinoMockAll.cc fakes/WString.cpp)
 target_link_libraries(runTests gtest gmock_main pthread)
 
 add_test(sensortests runTests)
