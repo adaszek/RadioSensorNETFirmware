@@ -3774,6 +3774,8 @@ Note: The AM2302 is a wired version of the DHT-22 which typically requires less 
 <part name="R2" library="SparkFun-Resistors" deviceset="10KOHM" device="-HORIZ-1/4W-1%" value="10k"/>
 <part name="C1" library="SparkFun-Capacitors" deviceset="0.1UF" device="-KIT-EZ-50V-20%" value="0.1uF"/>
 <part name="J2" library="SparkFun-Connectors" deviceset="CONN_02" device=""/>
+<part name="C3" library="SparkFun-Capacitors" deviceset="0.1UF" device="-KIT-EZ-50V-20%" value="0.1uF"/>
+<part name="GND6" library="SparkFun-PowerSymbols" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -3799,11 +3801,13 @@ Note: The AM2302 is a wired version of the DHT-22 which typically requires less 
 <instance part="SUPPLY4" gate="G$1" x="68.58" y="93.98" rot="R90"/>
 <instance part="J4" gate="J$1" x="203.2" y="104.14" rot="R180"/>
 <instance part="U2" gate="G$1" x="167.64" y="127"/>
-<instance part="SUPPLY5" gate="G$1" x="152.4" y="142.24"/>
+<instance part="SUPPLY5" gate="G$1" x="152.4" y="152.4"/>
 <instance part="GND5" gate="1" x="152.4" y="114.3"/>
 <instance part="R2" gate="G$1" x="147.32" y="137.16" rot="R90"/>
 <instance part="C1" gate="G$1" x="78.74" y="91.44" rot="R180"/>
 <instance part="J2" gate="G$1" x="160.02" y="83.82" rot="R270"/>
+<instance part="C3" gate="G$1" x="154.94" y="147.32" rot="R270"/>
+<instance part="GND6" gate="1" x="162.56" y="154.94" rot="R180"/>
 </instances>
 <busses>
 <bus name="MOSI,MISO,SCK">
@@ -3860,10 +3864,13 @@ Note: The AM2302 is a wired version of the DHT-22 which typically requires less 
 <pinref part="U2" gate="G$1" pin="VDD"/>
 <pinref part="SUPPLY5" gate="G$1" pin="VCC"/>
 <wire x1="157.48" y1="134.62" x2="152.4" y2="134.62" width="0.1524" layer="91"/>
-<wire x1="152.4" y1="134.62" x2="152.4" y2="142.24" width="0.1524" layer="91"/>
+<wire x1="152.4" y1="134.62" x2="152.4" y2="147.32" width="0.1524" layer="91"/>
 <pinref part="R2" gate="G$1" pin="2"/>
-<wire x1="147.32" y1="142.24" x2="152.4" y2="142.24" width="0.1524" layer="91"/>
-<junction x="152.4" y="142.24"/>
+<wire x1="152.4" y1="147.32" x2="152.4" y2="152.4" width="0.1524" layer="91"/>
+<wire x1="147.32" y1="142.24" x2="147.32" y2="147.32" width="0.1524" layer="91"/>
+<wire x1="147.32" y1="147.32" x2="152.4" y2="147.32" width="0.1524" layer="91"/>
+<junction x="152.4" y="147.32"/>
+<pinref part="C3" gate="G$1" pin="2"/>
 </segment>
 </net>
 <net name="GND" class="0">
@@ -3915,6 +3922,12 @@ Note: The AM2302 is a wired version of the DHT-22 which typically requires less 
 <wire x1="91.44" y1="60.96" x2="91.44" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="78.74" y1="63.5" x2="91.44" y2="63.5" width="0.1524" layer="91"/>
 <junction x="91.44" y="63.5"/>
+</segment>
+<segment>
+<pinref part="C3" gate="G$1" pin="1"/>
+<pinref part="GND6" gate="1" pin="GND"/>
+<wire x1="160.02" y1="147.32" x2="162.56" y2="147.32" width="0.1524" layer="91"/>
+<wire x1="162.56" y1="147.32" x2="162.56" y2="152.4" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="MOSI" class="0">
