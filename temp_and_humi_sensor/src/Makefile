@@ -1,6 +1,7 @@
 # Arduino Make file. Refer to https://github.com/sudar/Arduino-Makefile
 #AVR_TOOLS_DIR = /opt/ardu61/bin
-AVR_TOOLS_DIR = /usr
+#AVR_TOOLS_DIR = /usr
+AVR_TOOLS_DIR = /home/adaszek/Workspace/build_avr/gcc/
 
 ARCHITECTURE = avr
 BOARD_TAG    = pro

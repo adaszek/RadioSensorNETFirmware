@@ -10,9 +10,6 @@
 #include <RF24Mesh.h>
 #include <RF24Network.h>
 
-#include <memory>
-#include <type_traits>
-
 #if defined(DEBUG)
 #include "memdebug.h"
 #endif
