@@ -1,14 +1,14 @@
 #include "definitions.h"
 #include "battery.h"
-#include "mqtt_abstraction.h"
+//#include "mqtt_abstraction.h"
 #include "serial_reader.h"
 #include "temperature_sensor.h"
-
 #include <EEPROM.h>
 #include <RF24.h>
 #include <RF24Ethernet.h>
 #include <RF24Mesh.h>
 #include <RF24Network.h>
+#include <MQTTClient.h>
 
 #if defined(DEBUG)
 #include "memdebug.h"
@@ -32,6 +32,26 @@ RF24Network network(radio);
 RF24Mesh mesh(radio, network);
 RF24EthernetClass RF24Ethernet(radio, network, mesh); // Can't be wrapped due to some extern-magic
 
+
+//mqtt_publisher my_mqtt(mesh);
+EthernetClient net;
+MQTTClient client;
+
+void messageReceived(String &topic, String &payload);
+
+void connect() {
+  Serial.print("connecting...");
+  while (!client.connect("arduino")) {
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.println("\nconnected!");
+
+  // client.subscribe("/hello");
+  // client.unsubscribe("/hello");
+}
+
 namespace rf24_network {
 void start(const IPAddress& my_ip, const IPAddress& gateway_ip)
 {
@@ -43,10 +63,30 @@ void start(const IPAddress& my_ip, const IPAddress& gateway_ip)
     } else {
         INFO_PRINT(Serial.println(F("ME F")));
     }
+    //client.onMessage(messageReceived);
+    //connect();
 }
 }
 
-mqtt_publisher my_mqtt(mesh);
+//void messageReceived(String &topic, String &payload) {
+//  Serial.println("incoming: " + topic + " - " + payload);
+//}
+
+unsigned long lastMillis = 0;
+
+void loop_mqtt() {
+  client.loop();
+
+  if (!client.connected()) {
+    connect();
+  }
+
+  // publish a message roughly every second.
+  //if (millis() - lastMillis > 1000) {
+  //  lastMillis = millis();
+  //  client.publish("/hello", "world");
+  //}
+}
 
 unsigned long int what_time_is_now = 0;
 unsigned long int last_loop_timer = 0;
@@ -96,7 +136,6 @@ void setup()
 void configuration_mode()
 {
     INFO_PRINT(Serial.println(F("CM")));
-
     String location(configuration.location);
     IPAddress sip(configuration.sensor_ip[0], configuration.sensor_ip[1], configuration.sensor_ip[2], configuration.sensor_ip[3]);
     IPAddress gip(configuration.gateway_ip[0], configuration.gateway_ip[1], configuration.gateway_ip[2], configuration.gateway_ip[3]);
@@ -170,18 +209,22 @@ void processing_mode()
     DEBUG_PRINT(Serial.println(what_time_is_now));
     if ((what_time_is_now - last_loop_timer > publish_every_s * 1000) || startup_flag) {
         radio.powerUp();
-        my_mqtt.initialize(String(configuration.id), configuration.sensor_ip, configuration.broker_ip, NULL);
+
         last_loop_timer = what_time_is_now;
 #if defined(DEBUG)
         Serial.print("free memory = ");
         Serial.println(getFreeMemory());
 #endif
         //TODO: if cannot connect should be possible to go into config mode
+        /*
         while (!my_mqtt.start_and_supervise()) {
 //            RF24Ethernet.update();
             delay(200);
             DEBUG_PRINT(Serial.println("waiting"));
         }
+        */
+        client.begin(configuration.broker_ip, 1883, net);
+        loop_mqtt();
 
         temperature_sensor temp_sensor(2);
         dht22_reading temp_reading;
@@ -202,13 +245,13 @@ void processing_mode()
         {
             String capabilities = "r:t,h,v;w:0;s:";
             capabilities += sleep_for_s;
-            my_mqtt.publish(publish_prefix + "a", capabilities.c_str());
+            client.publish(publish_prefix + "a", capabilities);
             startup_flag = false;
         }
-        my_mqtt.publish(publish_prefix + "t", (byte*)&(temp_reading.temperature), sizeof(((dht22_reading*)0)->temperature));
-        my_mqtt.publish(publish_prefix + "h", (byte*)&(temp_reading.humidity), sizeof(((dht22_reading*)0)->humidity));
-        my_mqtt.publish(publish_prefix + "v", (byte*)&(voltage_reading), sizeof(voltage_reading));
-        my_mqtt.stop();
+        client.publish(publish_prefix + "t", String(temp_reading.temperature));
+        client.publish(publish_prefix + "h", String(temp_reading.humidity));
+        client.publish(publish_prefix + "v", String(voltage_reading));
+        client.disconnect();
         radio.powerDown();
     } else {
         DEBUG_PRINT(Serial.println("timer else"));
