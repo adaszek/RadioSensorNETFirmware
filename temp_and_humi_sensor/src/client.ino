@@ -1,156 +1,105 @@
-#include "definitions.h"
 #include "battery.h"
-//#include "mqtt_abstraction.h"
+#include "definitions.h"
 #include "serial_reader.h"
 #include "temperature_sensor.h"
 #include <EEPROM.h>
+#include <MQTTClient.h>
 #include <RF24.h>
 #include <RF24Ethernet.h>
 #include <RF24Mesh.h>
 #include <RF24Network.h>
-#include <MQTTClient.h>
 
 #if defined(DEBUG)
 #include "memdebug.h"
 #endif
 
-struct config {
-    char version[4]; // version of the config structure
-    uint8_t id;
-    uint8_t sensor_ip[4];
-    uint8_t gateway_ip[4];
-    uint8_t broker_ip[4];
-    char location[8];
-} configuration = { "001", 1, { 10, 10, 3, 30 }, { 10, 10, 3, 13 }, { 10, 10, 3, 13 }, { "unk" } };
+namespace {
+namespace config {
+    struct config_t {
+        char version[4]; // version of the config structure
+        uint8_t id;
+        uint8_t sensor_ip[4];
+        uint8_t gateway_ip[4];
+        uint8_t broker_ip[4];
+        char location[8];
+    } data { "001", 1, { 10, 10, 3, 30 }, { 10, 10, 3, 13 }, { 10, 10, 3, 13 }, { "unk" } };
 
-const char* rl_topic_prefix = { "r/l/" };
-
-const uint8_t config_pin = 9;
-
-RF24 radio{ 7, 8 };
-RF24Network network(radio);
-RF24Mesh mesh(radio, network);
-RF24EthernetClass RF24Ethernet(radio, network, mesh); // Can't be wrapped due to some extern-magic
-
-
-//mqtt_publisher my_mqtt(mesh);
-EthernetClient net;
-MQTTClient client;
-
-void messageReceived(String &topic, String &payload);
-
-void connect() {
-  Serial.print("connecting...");
-  while (!client.connect("arduino")) {
-    Serial.print(".");
-    delay(1000);
-  }
-
-  Serial.println("\nconnected!");
-
-  // client.subscribe("/hello");
-  // client.unsubscribe("/hello");
+    const char* rl_topic_prefix { "r/l/" };
+    const uint8_t pin {9};
+    const int sleep_for_s {1};
+    const int publish_every_s {1};
 }
 
-namespace rf24_network {
-void start(const IPAddress& my_ip, const IPAddress& gateway_ip)
-{
-    DEBUG_PRINT(Serial.println("ME S"));
-    Ethernet.begin(my_ip);
-    Ethernet.set_gateway(gateway_ip);
-    if (mesh.begin()) {
-        INFO_PRINT(Serial.println(F("ME O")));
-    } else {
-        INFO_PRINT(Serial.println(F("ME F")));
+unsigned long int what_time_is_now {0};
+unsigned long int last_loop_timer {0};
+unsigned long int sleep_counter {0};
+bool startup_flag {true};
+
+namespace rf24 {
+    RF24 radio { 7, 8 };
+    RF24Network network {radio};
+    RF24Mesh mesh {radio, network};
+    EthernetClient ethernet;
+    
+    void start(const IPAddress& my_ip, const IPAddress& gateway_ip)
+    {
+        DEBUG_PRINT(Serial.println("ME S"));
+        Ethernet.begin(my_ip);
+        Ethernet.set_gateway(gateway_ip);
+        if (mesh.begin()) {
+            INFO_PRINT(Serial.println(F("ME O")));
+        } else {
+            INFO_PRINT(Serial.println(F("ME F")));
+        }
     }
-    //client.onMessage(messageReceived);
-    //connect();
 }
 }
 
-//void messageReceived(String &topic, String &payload) {
-//  Serial.println("incoming: " + topic + " - " + payload);
-//}
+//This must be global and visible outside
+RF24EthernetClass RF24Ethernet(rf24::radio, rf24::network, rf24::mesh); // Can't be wrapped due to some extern-magic
 
-unsigned long lastMillis = 0;
+namespace {
+namespace mqtt {
+    MQTTClient client;
 
-void loop_mqtt() {
-  client.loop();
-
-  if (!client.connected()) {
-    connect();
-  }
-
-  // publish a message roughly every second.
-  //if (millis() - lastMillis > 1000) {
-  //  lastMillis = millis();
-  //  client.publish("/hello", "world");
-  //}
-}
-
-unsigned long int what_time_is_now = 0;
-unsigned long int last_loop_timer = 0;
-unsigned long int sleep_counter = 0;
-const int sleep_for_s = 1;
-const int publish_every_s = 1;
-
-bool startup_flag = true;
-
-template <>
-void execute_impl(char* str_buffer, String& value_to_set) {
-    value_to_set = String(str_buffer);
-}
-
-template <>
-void execute_impl(char* str_buffer, IPAddress& value_to_set) {
-    IPAddress address;
-    address.fromString(str_buffer);
-    value_to_set = address;
-}
-
-template <>
-void execute_impl(char* str_buffer, uint8_t& value_to_set) {
-    value_to_set = atoi(str_buffer);
-}
-
-
-void setup()
-{
-    Serial.begin(57600);
-    if (EEPROM[0] == configuration.version[0] && EEPROM[1] == configuration.version[1] && EEPROM[2] == configuration.version[2]) {
-        EEPROM.get(0, configuration);
-        DEBUG_PRINT(Serial.println(F("C R")));
-    } else {
-        DEBUG_PRINT(Serial.println(F("C D")));
+    void connect()
+    {
+        DEBUG_PRINT(Serial.print(F("MQ")));
+        while (!client.connect("arduino")) {
+            DEBUG_PRINT(Serial.print(F(".")));
+            delay(1000);
+        }
+        DEBUG_PRINT(Serial.println(F("OK")));
     }
 
-    pinMode(config_pin, INPUT);
-    digitalWrite(config_pin, HIGH);
-    network.setup_watchdog(7);
-
-    rf24_network::start(configuration.sensor_ip, configuration.gateway_ip);
-
-    last_loop_timer = millis();
+    void loop()
+    {
+        client.loop();
+        if (!client.connected()) {
+            connect();
+        }
+    }
 }
+
 
 void configuration_mode()
 {
     INFO_PRINT(Serial.println(F("CM")));
-    String location(configuration.location);
-    IPAddress sip(configuration.sensor_ip[0], configuration.sensor_ip[1], configuration.sensor_ip[2], configuration.sensor_ip[3]);
-    IPAddress gip(configuration.gateway_ip[0], configuration.gateway_ip[1], configuration.gateway_ip[2], configuration.gateway_ip[3]);
-    IPAddress bip(configuration.broker_ip[0], configuration.broker_ip[1], configuration.broker_ip[2], configuration.broker_ip[3]);
+    String location(config::data.location);
+    IPAddress sip(config::data.sensor_ip[0], config::data.sensor_ip[1], config::data.sensor_ip[2], config::data.sensor_ip[3]);
+    IPAddress gip(config::data.gateway_ip[0], config::data.gateway_ip[1], config::data.gateway_ip[2], config::data.gateway_ip[3]);
+    IPAddress bip(config::data.broker_ip[0], config::data.broker_ip[1], config::data.broker_ip[2], config::data.broker_ip[3]);
 
-    uint8_t initial_id = configuration.id;
-    
-    set_action<uint8_t, 4> set_id("id", configuration.id);
+    uint8_t initial_id = config::data.id;
+
+    set_action<uint8_t, 4> set_id("id", config::data.id);
     set_action<String, 4> set_location("loc", location);
     set_action<IPAddress, 4> set_sip("sip", sip);
     set_action<IPAddress, 4> set_gip("gip", gip);
     set_action<IPAddress, 4> set_bip("bip", bip);
 
-    get_action<uint8_t, 4> get_id("id", configuration.id);
-    get_action<char[8], 4> get_location("loc", configuration.location);
+    get_action<uint8_t, 4> get_id("id", config::data.id);
+    get_action<char[8], 4> get_location("loc", config::data.location);
     get_action<IPAddress, 4> get_sip("sip", sip);
     get_action<IPAddress, 4> get_gip("gip", gip);
     get_action<IPAddress, 4> get_bip("bip", bip);
@@ -171,88 +120,75 @@ void configuration_mode()
     handler.get_actions[3] = &get_gip;
     handler.get_actions[4] = &get_bip;
 
-    while (digitalRead(config_pin) == LOW) {
+    while (digitalRead(config::pin) == LOW) {
         serial_receiver.get_serial_data();
         serial_receiver.handle_new_data();
     }
 
-    if (initial_id != configuration.id) {
+    if (initial_id != config::data.id) {
         startup_flag = true;
     }
 
-    strncpy(configuration.location, location.c_str(), sizeof(configuration.location));
-    configuration.location[sizeof(configuration.location) - 1] = '\0';
+    strncpy(config::data.location, location.c_str(), sizeof(config::data.location));
+    config::data.location[sizeof(config::data.location) - 1] = '\0';
 
-    configuration.sensor_ip[0] = sip[0];
-    configuration.sensor_ip[1] = sip[1];
-    configuration.sensor_ip[2] = sip[2];
-    configuration.sensor_ip[3] = sip[3];
+    config::data.sensor_ip[0] = sip[0];
+    config::data.sensor_ip[1] = sip[1];
+    config::data.sensor_ip[2] = sip[2];
+    config::data.sensor_ip[3] = sip[3];
 
-    configuration.gateway_ip[0] = gip[0];
-    configuration.gateway_ip[1] = gip[1];
-    configuration.gateway_ip[2] = gip[2];
-    configuration.gateway_ip[3] = gip[3];
+    config::data.gateway_ip[0] = gip[0];
+    config::data.gateway_ip[1] = gip[1];
+    config::data.gateway_ip[2] = gip[2];
+    config::data.gateway_ip[3] = gip[3];
 
-    configuration.broker_ip[0] = bip[0];
-    configuration.broker_ip[1] = bip[1];
-    configuration.broker_ip[2] = bip[2];
-    configuration.broker_ip[3] = bip[3];
+    config::data.broker_ip[0] = bip[0];
+    config::data.broker_ip[1] = bip[1];
+    config::data.broker_ip[2] = bip[2];
+    config::data.broker_ip[3] = bip[3];
 
-    EEPROM.put(0, configuration);
-
+    EEPROM.put(0, config::data);
 }
 
 void processing_mode()
 {
-//    RF24Ethernet.update();
-    what_time_is_now = millis() + (sleep_counter * sleep_for_s * 1000);
+    what_time_is_now = millis() + (sleep_counter * config::sleep_for_s * 1000);
     DEBUG_PRINT(Serial.println(what_time_is_now));
-    if ((what_time_is_now - last_loop_timer > publish_every_s * 1000) || startup_flag) {
-        radio.powerUp();
+    if ((what_time_is_now - last_loop_timer > config::publish_every_s * 1000) || startup_flag) {
+        rf24::radio.powerUp();
 
         last_loop_timer = what_time_is_now;
 #if defined(DEBUG)
         Serial.print("free memory = ");
         Serial.println(getFreeMemory());
 #endif
-        //TODO: if cannot connect should be possible to go into config mode
-        /*
-        while (!my_mqtt.start_and_supervise()) {
-//            RF24Ethernet.update();
-            delay(200);
-            DEBUG_PRINT(Serial.println("waiting"));
-        }
-        */
-        client.begin(configuration.broker_ip, 1883, net);
-        loop_mqtt();
+        mqtt::client.begin(config::data.broker_ip, 1883, rf24::ethernet);
+        mqtt::loop();
 
         temperature_sensor temp_sensor(2);
-        dht22_reading temp_reading;
-        uint32_t voltage_reading;
 
-        temp_reading = temp_sensor.read();
-        voltage_reading = battery_voltage::read();
-        
+        dht22_reading temp_reading {temp_sensor.read()};
+        uint32_t voltage_reading {static_cast<uint32_t>(battery_voltage::read())};
+
         String publish_prefix;
         publish_prefix.reserve(20);
-        publish_prefix.concat(rl_topic_prefix);
-        publish_prefix.concat(configuration.location);
+        publish_prefix.concat(config::rl_topic_prefix);
+        publish_prefix.concat(config::data.location);
         publish_prefix.concat("/s/");
-        publish_prefix.concat(String(configuration.id));
+        publish_prefix.concat(String(config::data.id));
         publish_prefix.concat("/");
-        
-        if (startup_flag)
-        {
+
+        if (startup_flag) {
             String capabilities = "r:t,h,v;w:0;s:";
-            capabilities += sleep_for_s;
-            client.publish(publish_prefix + "a", capabilities);
+            capabilities += config::sleep_for_s;
+            mqtt::client.publish(publish_prefix + "a", capabilities);
             startup_flag = false;
         }
-        client.publish(publish_prefix + "t", String(temp_reading.temperature));
-        client.publish(publish_prefix + "h", String(temp_reading.humidity));
-        client.publish(publish_prefix + "v", String(voltage_reading));
-        client.disconnect();
-        radio.powerDown();
+        mqtt::client.publish(publish_prefix + "t", String(temp_reading.temperature));
+        mqtt::client.publish(publish_prefix + "h", String(temp_reading.humidity));
+        mqtt::client.publish(publish_prefix + "v", String(voltage_reading));
+        mqtt::client.disconnect();
+        rf24::radio.powerDown();
     } else {
         DEBUG_PRINT(Serial.println("timer else"));
     }
@@ -262,13 +198,53 @@ void sleeping_mode()
 {
     DEBUG_PRINT(Serial.println("sleeping"));
     Serial.flush();
-    network.sleepNode(sleep_for_s, 255);
+    rf24::network.sleepNode(config::sleep_for_s, 255);
     sleep_counter++;
+}
+}
+
+template <>
+void execute_impl(char* str_buffer, String& value_to_set)
+{
+    value_to_set = String(str_buffer);
+}
+
+template <>
+void execute_impl(char* str_buffer, IPAddress& value_to_set)
+{
+    IPAddress address;
+    address.fromString(str_buffer);
+    value_to_set = address;
+}
+
+template <>
+void execute_impl(char* str_buffer, uint8_t& value_to_set)
+{
+    value_to_set = atoi(str_buffer);
+}
+
+void setup()
+{
+    Serial.begin(57600);
+    if (EEPROM[0] == config::data.version[0] && EEPROM[1] == config::data.version[1] && EEPROM[2] == config::data.version[2]) {
+        EEPROM.get(0, config::data);
+        DEBUG_PRINT(Serial.println(F("C R")));
+    } else {
+        DEBUG_PRINT(Serial.println(F("C D")));
+    }
+
+    pinMode(config::pin, INPUT);
+    digitalWrite(config::pin, HIGH);
+
+    rf24::network.setup_watchdog(7);
+    rf24::start(config::data.sensor_ip, config::data.gateway_ip);
+
+    last_loop_timer = millis();
 }
 
 void loop()
 {
-    if (digitalRead(config_pin) == LOW) {
+    if (digitalRead(config::pin) == LOW) {
         configuration_mode();
     } else {
         processing_mode();
